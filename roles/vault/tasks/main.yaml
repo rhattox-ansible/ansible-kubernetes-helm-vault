@@ -1,0 +1,83 @@
+- name: Add Vault Stack Helm repository
+  kubernetes.core.helm_repository:
+    name: hashicorp
+    repo_url: "{{ vault_helm_url }}"
+
+- name: Create Vault FilePath
+  become: true
+  ansible.builtin.file:
+    path: /mnt/vault/data
+    mode: "0777"
+    state: directory
+
+- name: Install vault
+  kubernetes.core.helm:
+    name: vault
+    chart_ref: hashicorp/vault
+    release_namespace: vault
+    create_namespace: true
+    chart_version: "0.28.0"
+    wait: true
+    timeout: 1m
+    values:
+      server:
+        service:
+          enabled: true
+          type: NodePort
+          ports:
+            - name: http
+              port: 8200
+              targetPort: 8200
+              nodePort: 38200
+        standalone:
+          enabled: false
+        ha:
+          enabled: true
+          replicas: 1
+          config: |
+            ui = true
+
+            listener "tcp" {
+              address     = "0.0.0.0:8200"
+              tls_disable = 1
+            }
+
+            storage "raft" {
+              path    = "/vault/data"
+              node_id = "$(POD_NAME)"
+            }
+
+            api_addr     = "http://$(POD_IP):8200"
+            cluster_addr = "http://$(POD_IP):8201"
+            disable_mlock = true
+        volumes:
+          - name: vault-local-storage
+            hostPath:
+              path: /mnt/vault/data
+              type: DirectoryOrCreate
+        volumeMounts:
+          - name: vault-local-storage
+            mountPath: /vault/data
+      injector:
+        enabled: false
+
+- name: Initialize Vault with 1 key
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: "{{ pod_name }}"
+    command: vault operator init -key-shares=1 -key-threshold=1 -format=json
+  register: vault_init_result
+  failed_when: "'errors' in vault_init_result.stdout"
+
+- name: Save unseal keys and root token
+  ansible.builtin.copy:
+    dest: /mnt/vault/vault-init.json
+    content: "{{ vault_init_result.stdout }}"
+    mode: "0755"
+  delegate_to: localhost
+
+- name: Unseal Vault with the single key
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: "{{ pod_name }}"
+    command: vault operator unseal "{{ (vault_init_result.stdout | from_json).unseal_keys_b64[0] }}"

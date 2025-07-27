@@ -1,0 +1,3 @@
+vault_helm_url: "https://helm.releases.hashicorp.com"
+namespace: vault
+pod_name: vault-0
