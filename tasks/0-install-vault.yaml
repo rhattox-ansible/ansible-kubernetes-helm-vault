@@ -17,8 +17,8 @@
     release_namespace: vault
     create_namespace: true
     chart_version: "0.28.0"
-    wait: true
-    timeout: 1m
+    wait: false
+    timeout: 5m
     values:
       server:
         service:
@@ -60,6 +60,10 @@
             mountPath: /vault/data
       injector:
         enabled: false
+
+- name: Pause for one minute before initializing Vault
+  ansible.builtin.pause:
+    minutes: 1
 
 - name: Initialize Vault with one key share and a threshold of one
   kubernetes.core.k8s_exec:
