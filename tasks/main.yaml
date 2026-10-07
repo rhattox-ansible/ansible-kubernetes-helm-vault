@@ -1,0 +1,16 @@
+- name: Report start of Vault installation
+  ansible.builtin.debug:
+    msg:
+      - "=================================================="
+      - "Vault installation..."
+      - "=================================================="
+
+- name: Install, initialize, and unseal Vault
+  ansible.builtin.include_tasks: 0-install-vault.yaml
+
+- name: Report successful completion of Vault installation
+  ansible.builtin.debug:
+    msg:
+      - "=================================================="
+      - "Vault installation completed successfully."
+      - "=================================================="

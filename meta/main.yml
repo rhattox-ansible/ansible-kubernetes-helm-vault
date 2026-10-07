@@ -1,0 +1,11 @@
+galaxy_info:
+  role_name: ansible_kubernetes_helm_vault
+  description: Install Vault on Kubernetes with Helm, initialize it, and unseal it.
+  min_ansible_version: "2.10"
+  galaxy_tags:
+    - kubernetes
+    - helm
+    - vault
+    - hashicorp
+
+dependencies: []

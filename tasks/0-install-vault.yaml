@@ -1,16 +1,16 @@
-- name: Add Vault Stack Helm repository
+- name: Add HashiCorp Helm repository
   kubernetes.core.helm_repository:
     name: hashicorp
     repo_url: "{{ vault_helm_url }}"
 
-- name: Create Vault FilePath
+- name: Create Vault data directory on the host
   become: true
   ansible.builtin.file:
     path: /mnt/vault/data
     mode: "0777"
     state: directory
 
-- name: Install vault
+- name: Install Vault Helm chart with single-replica Raft storage
   kubernetes.core.helm:
     name: vault
     chart_ref: hashicorp/vault
@@ -61,7 +61,7 @@
       injector:
         enabled: false
 
-- name: Initialize Vault with 1 key
+- name: Initialize Vault with one key share and a threshold of one
   kubernetes.core.k8s_exec:
     namespace: "{{ namespace }}"
     pod: "{{ pod_name }}"
@@ -69,7 +69,7 @@
   register: vault_init_result
   failed_when: "'errors' in vault_init_result.stdout"
 
-- name: Save unseal keys and root token
+- name: Save Vault initialization JSON containing unseal keys and root token locally
   ansible.builtin.copy:
     dest: /mnt/vault/vault-init.json
     content: "{{ vault_init_result.stdout }}"

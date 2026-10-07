@@ -4,5 +4,8 @@
   gather_facts: true
   vars:
     ansible_python_interpreter: /opt/ansible-venv/bin/python
-  roles:
-    - vault
+  vars_files:
+    - defaults/main.yaml
+  tasks:
+    - name: Install Vault Helm chart, initialize Vault, and unseal Vault
+      ansible.builtin.include_tasks: "tasks/main.yaml"
